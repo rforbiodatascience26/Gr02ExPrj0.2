@@ -1,3 +1,7 @@
+# All local data
+/data/
+/Data/
+
 # History files
 .Rhistory
 .Rapp.history
