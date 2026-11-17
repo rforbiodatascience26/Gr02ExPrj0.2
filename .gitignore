@@ -53,3 +53,10 @@ rsconnect/
 src/*.o
 src/*.so
 src/*.dll
+data/*
+!data/.gitkeep
+!data/_raw/
+data/_raw/*
+!data/_raw/.gitkeep
+.quarto/
+*_files/
