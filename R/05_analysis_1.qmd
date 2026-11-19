@@ -1,5 +1,197 @@
 ---
-title: "05_analysis_1"
+title: "05_analysis_1: PCA of hippocampus and DLPFC samples"
 format: html
 ---
 
+## Aim
+
+Use principal component analysis (PCA) to see whether samples group by brain region (hippocampus vs. dorsolateral prefrontal cortex, DLPFC) or by developmental age.
+
+## Load libraries
+
+```{r}
+#| message: false
+library("tidyverse")
+library("broom")
+```
+
+## Load data
+
+Temporary input: the region-specific BrainSpan expression matrices in `data/_external/`. When `03_augment.qmd` writes `data/03_dat_aug.tsv`, switch to that file.
+
+```{r}
+#| message: false
+hip_raw <- read_csv(file = "../data/_external/BrainSpan_HIPPOCAMPUS_expression_matrix.csv",
+                    name_repair = "unique_quiet")
+dlpfc_raw <- read_csv(file = "../data/_external/BrainSpan_DLPFC_expression_matrix.csv",
+                      name_repair = "unique_quiet")
+```
+
+## Tidy data
+
+One row per gene and sample. The age is stored in the column names as log10(age in years + 0.7), where negative ages are prenatal.
+
+```{r}
+expr_long <- bind_rows(
+  hip_raw |>
+    rename(gene_id = 1) |>
+    pivot_longer(cols = -gene_id,
+                 names_to = "sample",
+                 values_to = "expression") |>
+    mutate(region = "Hippocampus"),
+  dlpfc_raw |>
+    rename(gene_id = 1) |>
+    pivot_longer(cols = -gene_id,
+                 names_to = "sample",
+                 values_to = "expression") |>
+    mutate(region = "DLPFC")
+) |>
+  mutate(sample_id = str_c(region, "_", sample),
+         log_age = sample |>
+           str_remove("^Human_Age_log10Yrs_plus0.7_") |>
+           str_remove("[.]{3}[0-9]+$") |>
+           as.numeric(),
+         age_years = 10^log_age - 0.7,
+         age_group = case_when(age_years < 0 ~ "Prenatal",
+                               age_years < 2 ~ "Infant",
+                               age_years < 12 ~ "Child",
+                               age_years < 20 ~ "Adolescent",
+                               TRUE ~ "Adult"),
+         age_group = factor(age_group,
+                            levels = c("Prenatal", "Infant", "Child",
+                                       "Adolescent", "Adult")))
+```
+
+## Select genes
+
+Keep expressed genes (mean expression of at least 1), log2-transform, and use the 1000 most variable genes.
+
+```{r}
+expr_log <- expr_long |>
+  group_by(gene_id) |>
+  filter(mean(expression) >= 1) |>
+  ungroup() |>
+  mutate(log2_expr = log2(expression + 1))
+
+top_genes <- expr_log |>
+  group_by(gene_id) |>
+  summarise(variance = var(log2_expr)) |>
+  slice_max(variance, n = 1000)
+
+sample_info <- expr_log |>
+  distinct(sample_id, region, log_age, age_years, age_group)
+
+expr_wide <- expr_log |>
+  semi_join(top_genes, by = "gene_id") |>
+  select(sample_id, gene_id, log2_expr) |>
+  pivot_wider(names_from = gene_id,
+              values_from = log2_expr) |>
+  left_join(sample_info, by = "sample_id")
+```
+
+## PCA
+
+```{r}
+pca_fit <- expr_wide |>
+  select(starts_with("ENSG")) |>
+  prcomp(scale. = TRUE)
+
+pca_scores <- pca_fit |>
+  augment(expr_wide |> select(sample_id, region, log_age, age_years, age_group))
+
+pca_variance <- pca_fit |>
+  tidy(matrix = "eigenvalues")
+
+pc1_pct <- pca_variance |> filter(PC == 1) |> pull(percent)
+pc2_pct <- pca_variance |> filter(PC == 2) |> pull(percent)
+```
+
+## Plots
+
+### Samples on PC1 and PC2
+
+```{r}
+pl_scores <- pca_scores |>
+  ggplot(aes(x = .fittedPC1,
+             y = .fittedPC2,
+             colour = age_group,
+             shape = region)) +
+  geom_point(size = 3,
+             alpha = 0.8) +
+  labs(title = "PCA of hippocampus and DLPFC samples",
+       x = str_c("PC1 (", scales::percent(pc1_pct, accuracy = 0.1), ")"),
+       y = str_c("PC2 (", scales::percent(pc2_pct, accuracy = 0.1), ")"),
+       colour = "Age group",
+       shape = "Region") +
+  theme_minimal()
+
+pl_scores
+```
+
+### Variance explained
+
+```{r}
+pl_variance <- pca_variance |>
+  filter(PC <= 10) |>
+  ggplot(aes(x = PC,
+             y = percent)) +
+  geom_col(fill = "steelblue") +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Variance explained by the first 10 PCs",
+       x = "Principal component",
+       y = "Variance explained") +
+  theme_minimal()
+
+pl_variance
+```
+
+### PC1 across development
+
+```{r}
+pl_pc1_age <- pca_scores |>
+  ggplot(aes(x = log_age,
+             y = .fittedPC1,
+             colour = region)) +
+  geom_point(size = 2) +
+  geom_smooth(method = "loess",
+              formula = y ~ x,
+              se = FALSE) +
+  geom_vline(xintercept = log10(0.7),
+             linetype = "dashed") +
+  labs(title = "PC1 across development (dashed line = birth)",
+       x = "Age, log10(years + 0.7)",
+       y = "PC1",
+       colour = "Region") +
+  theme_minimal()
+
+pl_pc1_age
+```
+
+## Save plots
+
+```{r}
+ggsave(filename = "../results/05_pca_scores.png",
+       plot = pl_scores,
+       width = 7,
+       height = 5,
+       bg = "white")
+ggsave(filename = "../results/05_pca_variance.png",
+       plot = pl_variance,
+       width = 7,
+       height = 5,
+       bg = "white")
+ggsave(filename = "../results/05_pca_pc1_age.png",
+       plot = pl_pc1_age,
+       width = 7,
+       height = 5,
+       bg = "white")
+```
+
+## Key findings
+
+- PC1 explains `r scales::percent(pc1_pct, accuracy = 0.1)` of the variation and follows age: prenatal samples are separated from postnatal samples.
+- Most of the change along PC1 happens before and around birth and levels off during childhood.
+- Hippocampus and DLPFC follow almost the same trajectory on PC1, so developmental age has a much larger effect than brain region.
+- Region differences are clearest among prenatal samples on PC2 (`r scales::percent(pc2_pct, accuracy = 0.1)`).
+- One prenatal DLPFC sample groups with the postnatal samples and could be an outlier.
