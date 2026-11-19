@@ -2,12 +2,11 @@
 # Project Contributors
 
 | Student ID | GitHub username |
-|---|---|
-| s262110 | joshlopez01 |
-| s...... | ... |
-| s...... | ... |
-| s...... | ... |
-| s...... | ... |
+| s265210    | williamdore06   |
+| s262110    | joshlopez01     |
+| s......... | ... |
+| s......... | ... |
+| s......... | ... |
 
 # Gr02ExPrj: BrainSpan developmental transcriptome
 Exam project of group 02, R for Bio Data Science (Fall 2026).
