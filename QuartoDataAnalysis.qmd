@@ -1,0 +1,25 @@
+---
+title: "Expression Analysis"
+author: "Group 02"
+format: html
+editor: visual
+---
+
+## Tidying
+
+```{r}
+library(tidyverse)
+rdir <- "data/_raw"
+expression_matrix <- read_csv(file.path(rdir,"Expression",
+                                        "expression_matrix.csv"),
+                              col_names = F) 
+DLFPC_expression_matrix <- read_csv(file.path(rdir,"BrainSpan_DLPFC_expression_matrix.7z"), col_names = F)
+
+Hippocampus_expression_matrix <- read_csv(file.path(rdir,"BrainSpan_HIPPOCAMPUS_expression_matrix.7z"), col_names = F)
+
+# Reads the expression matrices with the first row as data rather than column titles.
+
+Hippocampus_expression_matrix
+DLFPC_expression_matrix
+expression_matrix
+```
