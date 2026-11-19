@@ -2,6 +2,7 @@
 # Project Contributors
 
 | Student ID | GitHub username |
+| --- | --- |
 | s265210    | williamdore06   |
 | s262110    | joshlopez01     |
 | s......... | ... |
