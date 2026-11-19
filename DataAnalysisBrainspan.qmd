@@ -13,22 +13,40 @@ library(tidyverse)
 
 options(timeout = 1200)
 rdir <- "data/_raw"
+edir <- "data/_external"
 
 # Downloading of .csv's from Brainspan.
 zip_url  <- "https://brainspan.org/api/v2/well_known_file_download/267666525"
 zip_path <- file.path(rdir, "brainspan_genes.zip")
 
 
-# Downloading Unzipping Expression Matrix
+# Downloading and Unzipping Expression Matrix, while making it a prerequisite that the expression matrix and the two metadata .csv's are present.
+
 prereq <- file.path(rdir, c("expression_matrix.csv", "columns_metadata.csv", "rows_metadata.csv"))
 
-if (!all(file.exists(prereq))){
+if (!all(file.exists(prereq))) {
   download.file(zip_url, zip_path, mode = "wb")
   download.file(zip_url, zip_path, mode = "wb")
   file.size(zip_path) / 1e6
   unzip(zip_path, list = TRUE)
   unzip(zip_path, exdir = rdir)}
 
-```
+# Reading matrices and metadata
 
-![](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACgAAAAaCAYAAADFTB7LAAAAfUlEQVR4Xu2OOwqAUAwEA/rwc/97WFh6BbGxFS8giAdQootdypcUCjuwZSYjQsjPOGrRsxG92rzhFg7rDWNJolslumcOt3BYbxhzeh+smcMtHNYbBgO9MNALA70w0AsDvTDQy+cDx1J0cg4O6w1jeOR9IdplDrdwWC8hX+UGMSxfsaujL1cAAAAASUVORK5CYII= "Run Current Chunk")
+expression_matrix <- read_csv(file.path(rdir, "expression_matrix.csv"),
+                              col_names = FALSE,
+                              col_types = cols(.default = col_double()))
+
+rows_metadata <- read_csv(file.path(rdir, "rows_metadata.csv"))
+columns_metadata  <- read_csv(file.path(rdir, "columns_metadata.csv"))
+  col_types = cols(.default = col_double())
+
+hippocampus_expression_matrix <- read_csv(file.path(edir, "BrainSpan_HIPPOCAMPUS_expression_matrix.csv")) 
+DLPFC_expression_matrix <- read_csv(file.path(edir, "BrainSpan_DLPFC_expression_matrix.csv"))
+  
+expression_matrix
+rows_metadata
+columns_metadata
+hippocampus_expression_matrix
+DLPFC_expression_matrix
+```
