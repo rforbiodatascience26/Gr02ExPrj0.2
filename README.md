@@ -20,7 +20,7 @@ hippocampus and prefrontal cortex across development?
 
 # Data
 Data comes from BrainSpan (Allen Institute), RNA-seq Gencode v10 summarized
-to genes: <URL of the NeMO folder>.
+to genes: https://data.nemoarchive.org/other/grant/brainspan/transcriptome/bulk/RNAseqDevelopmentalTranscriptomeDataset/RnaseqGencode_v10_SummarizedToGenes/?C=M&O=A
 Data is not stored on GitHub. `R/01_load.qmd` downloads the raw files into
 `data/_raw/` automatically if they are missing. To download manually, place
 `expression_matrix.csv`, `columns_metadata.csv` and `rows_metadata.csv` in
