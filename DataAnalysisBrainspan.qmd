@@ -10,7 +10,7 @@ editor: visual
 ```{r}
 library(tidyverse)
 
-
+# Setting up directories for later downloads, and a timeout limit to allow the downloading of larger files.
 options(timeout = 1200)
 rdir <- "data/_raw"
 edir <- "data/_external"
@@ -34,7 +34,7 @@ if (!all(file.exists(prereq))) {
 # Reading matrices and metadata
 
 expression_matrix <- read_csv(file.path(rdir, "expression_matrix.csv"),
-                              col_names = FALSE,
+                              col_names = c("ExpMtx", as.character(columns_metadata$column_num)),
                               col_types = cols(.default = col_double()))
 
 rows_metadata <- read_csv(file.path(rdir, "rows_metadata.csv"))
@@ -44,9 +44,30 @@ columns_metadata  <- read_csv(file.path(rdir, "columns_metadata.csv"))
 hippocampus_expression_matrix <- read_csv(file.path(edir, "BrainSpan_HIPPOCAMPUS_expression_matrix.csv")) 
 DLPFC_expression_matrix <- read_csv(file.path(edir, "BrainSpan_DLPFC_expression_matrix.csv"))
   
-expression_matrix
+
 rows_metadata
 columns_metadata
+expression_matrix
 hippocampus_expression_matrix
 DLPFC_expression_matrix
+```
+
+```{r}
+# Calling the first row of the two expression matrices, as tibbles, which are both transformed to extract their linearized values as pure vectors, which are converted to pcw, unless they're already born whereupon their unit is converted to years (yrs).
+
+ltnc <- "(?<=plus0\\.7_)-?\\d+\\.\\d+"
+hpc_colnames <- tibble(sample=names(hippocampus_expression_matrix))|> mutate(age_log = as.numeric(str_extract(sample, ltnc))) |> filter(!is.na(age_log)) |> mutate(age = round(((10^age_log-0.7)*52+40),1)) |> mutate(age = if_else(age >= 40, str_c(round((age-40)/52,1),"yrs"),str_c(age,"pcw"))) 
+
+hpc_colnames
+dlpfc_colnames <- tibble(sample=names(DLPFC_expression_matrix))|> mutate(age_log = as.numeric(str_extract(sample, ltnc))) |> filter(!is.na(age_log)) |> mutate(age = round(((10^age_log-0.7)*52+40),1)) |> mutate(age = if_else(age >= 40, str_c(round((age-40)/52,1),"yrs"),str_c(age,"pcw"))) 
+
+hpc_list <- as.list(hpc_colnames) 
+dlpfc_list <- as.list(dlpfc_colnames)
+
+hpc_exp_matrix_revised_colnames <- hippocampus_expression_matrix
+
+colnames(hpc_exp_matrix_revised_colnames) <- c("gene", make.unique(as.character(hpc_list$age)))
+
+hpc_exp_matrix_revised_colnames
+
 ```
