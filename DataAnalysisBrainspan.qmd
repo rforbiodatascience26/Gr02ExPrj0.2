@@ -34,7 +34,7 @@ if (!all(file.exists(prereq))) {
 # Reading matrices and metadata
 
 expression_matrix <- read_csv(file.path(rdir, "expression_matrix.csv"),
-                              col_names = c("ExpMtx", as.character(columns_metadata$column_num)),
+                              col_names = c("GeneID", as.character(columns_metadata$column_num)),
                               col_types = cols(.default = col_double()))
 
 rows_metadata <- read_csv(file.path(rdir, "rows_metadata.csv"))
@@ -71,5 +71,13 @@ colnames(hpc_exp_matrix_revised_colnames) <- c("gene", make.unique(as.character(
 
 dlpfc_exp_matrix_revised_colnames <- DLPFC_expression_matrix
 colnames(dlpfc_exp_matrix_revised_colnames) <- c("gene", make.unique(as.character(dlpfc_list$age)))
+
+dlpfc_exp_matrix_revised_colnames
+
+```
+
+```{r}
+expression_matrix$GeneID = rows_metadata$ensembl_gene_id
+expression_matrix
 
 ```
