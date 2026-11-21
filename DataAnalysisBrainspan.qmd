@@ -58,16 +58,18 @@ DLPFC_expression_matrix
 ltnc <- "(?<=plus0\\.7_)-?\\d+\\.\\d+"
 hpc_colnames <- tibble(sample=names(hippocampus_expression_matrix))|> mutate(age_log = as.numeric(str_extract(sample, ltnc))) |> filter(!is.na(age_log)) |> mutate(age = round(((10^age_log-0.7)*52+40),1)) |> mutate(age = if_else(age >= 40, str_c(round((age-40)/52,1),"yrs"),str_c(age,"pcw"))) 
 
-hpc_colnames
 dlpfc_colnames <- tibble(sample=names(DLPFC_expression_matrix))|> mutate(age_log = as.numeric(str_extract(sample, ltnc))) |> filter(!is.na(age_log)) |> mutate(age = round(((10^age_log-0.7)*52+40),1)) |> mutate(age = if_else(age >= 40, str_c(round((age-40)/52,1),"yrs"),str_c(age,"pcw"))) 
+
+# Converting the legible value tables to lists.
 
 hpc_list <- as.list(hpc_colnames) 
 dlpfc_list <- as.list(dlpfc_colnames)
 
+# Replacing the linearized, logarithmic column values with standardized cwd/yr values.
 hpc_exp_matrix_revised_colnames <- hippocampus_expression_matrix
-
 colnames(hpc_exp_matrix_revised_colnames) <- c("gene", make.unique(as.character(hpc_list$age)))
 
-hpc_exp_matrix_revised_colnames
+dlpfc_exp_matrix_revised_colnames <- DLPFC_expression_matrix
+colnames(dlpfc_exp_matrix_revised_colnames) <- c("gene", make.unique(as.character(dlpfc_list$age)))
 
 ```
