@@ -3,3 +3,59 @@ title: "01_load"
 format: html
 ---
 
+## Aim
+
+This is a script that downloads the BrainSpan developmental transcriptome
+(RNA-seq, Gencode v10, summarised to genes) from the NeMO archive and then
+loads it into R. The data available comes as three files:
+
+-   `expression_matrix.csv`: RPKM values, one row per gene and one column
+    per sample. No header row, first column is a row number.
+-   `rows_metadata.csv`: gene information (one row per gene).
+-   `columns_metadata.csv`: sample information such as donor, age, sex
+    and brain region (one row per sample).
+
+The output, `data/01_dat_load.tsv`, combines all three into one table with
+one row per sample: sample information first, then one column per gene.
+
+## Loading libraries
+```{r}
+#| message: false
+library("tidyverse")
+library("here")
+library("curl")
+source(file = here("R/99_proj_func.R"))
+```
+
+## Define data locations
+
+```{r}
+data_dir <- here("data")
+raw_dir <- here("data/_raw")
+base_url <- str_c("https://data.nemoarchive.org/other/grant/brainspan/",
+                  "transcriptome/bulk/",
+                  "RNAseqDevelopmentalTranscriptomeDataset/",
+                  "RnaseqGencode_v10_SummarizedToGenes/")
+raw_files <- c("expression_matrix.csv",
+               "columns_metadata.csv",
+               "rows_metadata.csv")
+```
+## Download data
+
+The `data/` folder is not on GitHub as per assignment instructions, so after a fresh clone it does not
+exist.So we must create `data/` and `data/_raw/`, then we download each file only if
+it is missing.
+
+```{r}
+if (!dir.exists(data_dir)) {
+  dir.create(path = data_dir)
+}
+if (!dir.exists(raw_dir)) {
+  dir.create(path = raw_dir)
+}
+
+raw_files |>
+  map(.f = ~ download_if_missing(file_name = .x,
+                                 base_url = base_url,
+                                 raw_dir = raw_dir))
+```
