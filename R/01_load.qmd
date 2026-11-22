@@ -59,3 +59,97 @@ raw_files |>
                                  base_url = base_url,
                                  raw_dir = raw_dir))
 ```
+## Read data
+
+```{r}
+columns_metadata <- read_csv(file = str_c(raw_dir, "/columns_metadata.csv"))
+
+rows_metadata <- read_csv(file = str_c(raw_dir, "/rows_metadata.csv"))
+
+# The matrix has no header row. With col_names = FALSE, readr names the
+# columns X1, X2, X3, ... instead of using the first row of data as names
+expression_matrix <- read_csv(file = str_c(raw_dir, "/expression_matrix.csv"),
+                              col_names = FALSE)
+```
+## Check the loaded data
+
+The matrix should have one row per gene in `rows_metadata`, and one
+column per sample in `columns_metadata` plus the row number column.
+
+```{r}
+tibble(table = c("expression_matrix",
+                 "rows_metadata",
+                 "columns_metadata"),
+       n_rows = c(nrow(expression_matrix),
+                  nrow(rows_metadata),
+                  nrow(columns_metadata)),
+       n_cols = c(ncol(expression_matrix),
+                  ncol(rows_metadata),
+                  ncol(columns_metadata)))
+```
+
+Each Ensembl gene ID should appear only once, otherwise genes would be
+merged when we make one column per gene.
+
+```{r}
+rows_metadata |>
+  count(ensembl_gene_id) |>
+  filter(n > 1)
+```
+
+## Combine into one table
+
+Data is put into table. Each gene column is named
+`<ensembl_gene_id>_<gene_symbol>` so both identifiers are kept for
+`02_clean.qmd`. Genes without a symbol keep only their Ensembl ID, since a
+missing value cannot be used as a column name.
+
+```{r}
+gene_names <- rows_metadata |>
+  mutate(gene = case_when(
+    is.na(gene_symbol) ~ ensembl_gene_id,
+    !is.na(gene_symbol) ~ str_c(ensembl_gene_id, "_", gene_symbol))) |>
+  select(row_num, gene)
+```
+
+We turn the matrix around (samples as rows, genes as columns) with a long
+pivot followed by a wide pivot. Column `X1` is the gene row number. The
+sample columns are `X2`, `X3`, ..., so sample number `column_num` in
+`columns_metadata` is the column number minus 1.
+
+```{r}
+expression_wide <- expression_matrix |>
+  rename(row_num = X1) |>
+  left_join(gene_names,
+            by = "row_num") |>
+  select(-row_num) |>
+  pivot_longer(cols = starts_with("X"),
+               names_to = "column_num",
+               values_to = "rpkm") |>
+  mutate(column_num = str_remove(column_num, "X"),
+         column_num = as.numeric(column_num) - 1) |>
+  pivot_wider(names_from = gene,
+              values_from = rpkm)
+```
+
+Joining onto `columns_metadata` puts the sample information first.
+
+```{r}
+dat_load <- columns_metadata |>
+  left_join(expression_wide,
+            by = "column_num")
+
+dat_load |>
+  select(1:12)
+```
+
+## Write data
+
+```{r}
+dat_load |>
+  write_tsv(file = here("data/01_dat_load.tsv"))
+```
+
+
+
+
