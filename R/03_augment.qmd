@@ -3,3 +3,39 @@ title: "03_augment"
 format: html
 ---
 
+## Log-transform expression
+
+```{r}
+expr_clean <- readr::read_tsv(
+  "../data/02_dat_clean.tsv",
+  show_col_types = FALSE
+)
+
+expr_aug <- expr_clean |>
+  dplyr::mutate(log2_expr = log2(expression + 1))
+```
+## Derive developmental age and age group
+
+```{r}
+expr_aug <- expr_aug |>
+  dplyr::mutate(
+    age_years = 10^log_age - 0.7,
+    age_group = dplyr::case_when(
+      is.na(age_years) ~ NA_character_,
+      age_years < 0 ~ "Prenatal",
+      age_years < 2 ~ "Infant",
+      age_years < 12 ~ "Child",
+      age_years < 20 ~ "Adolescent",
+      TRUE ~ "Adult"
+    ),
+    age_group = factor(
+      age_group,
+      levels = c("Prenatal", "Infant", "Child", "Adolescent", "Adult")
+    )
+  )
+```
+## Save augmented data
+
+```{r}
+readr::write_tsv(expr_aug, "../data/03_dat_aug.tsv")
+```
