@@ -1,28 +1,78 @@
 ---
 title: "03_augment"
+author: "Group 02"
 format: html
+editor: visual
 ---
+
+## Aim
+
+This script reads the cleaned BrainSpan data from `02_clean.qmd` and adds
+two variables for the analysis: log-transformed expression and developmental
+age group. It also extracts numeric ages from the original age labels.
+The output is `data/03_dat_aug.tsv`, with one row per gene and sample.
+
+## Loading libraries
+
+```{r}
+#| message: false
+library("tidyverse")
+library("here")
+```
+
+## Read cleaned data
+
+The input is the long table from `02_clean.qmd`. The `rpkm` column contains
+the expression value, and the `age` column contains the original BrainSpan
+age label for each sample.
+
+```{r}
+expr_clean <- read_tsv(
+  file = here("data", "02_dat_clean.tsv"),
+  show_col_types = FALSE
+)
+```
 
 ## Log-transform expression
 
-```{r}
-expr_clean <- readr::read_tsv(
-  "../data/02_dat_clean.tsv",
-  show_col_types = FALSE
-)
+Expression values can span several orders of magnitude. We use a base-2
+logarithm to compress this range. Adding 1 before taking the logarithm
+keeps zero expression values defined.
 
+```{r}
 expr_aug <- expr_clean |>
-  dplyr::mutate(log2_expr = log2(expression + 1))
+  mutate(log2_expr = log2(rpkm + 1))
 ```
+
 ## Derive developmental age and age group
+
+We split each age label into a number and a unit. Prenatal labels such as
+`12 pcw` are stored in `age_pcw` as post-conception weeks. Postnatal labels
+such as `6 mos` and `4 yrs` are stored in `age_years`. We divide months by
+12 to express both postnatal units in years.
+
+We then assign samples to five developmental groups. Postnatal samples
+under 2 years are classified as Infant, ages 2 to under 12 as Child,
+ages 12 to under 20 as Adolescent, and ages 20 and above as Adult.
 
 ```{r}
 expr_aug <- expr_aug |>
-  dplyr::mutate(
-    age_years = 10^log_age - 0.7,
-    age_group = dplyr::case_when(
+  mutate(
+    age_label = str_to_lower(str_squish(age)),
+    age_value = parse_number(age_label),
+    age_pcw = if_else(
+      str_detect(age_label, "\\bpcw$"),
+      age_value,
+      NA_real_
+    ),
+    age_years = case_when(
+      str_detect(age_label, "\\bmos?$") ~ age_value / 12,
+      str_detect(age_label, "\\byrs?$") ~ age_value,
+      .default = NA_real_
+    ),
+    age_group = case_when(
+      !is.na(age_pcw) ~ "Prenatal",
       is.na(age_years) ~ NA_character_,
-      age_years < 0 ~ "Prenatal",
       age_years < 2 ~ "Infant",
       age_years < 12 ~ "Child",
       age_years < 20 ~ "Adolescent",
@@ -32,10 +82,25 @@ expr_aug <- expr_aug |>
       age_group,
       levels = c("Prenatal", "Infant", "Child", "Adolescent", "Adult")
     )
-  )
+  ) |>
+  select(-age_label, -age_value)
 ```
-## Save augmented data
+
+## Check the derived ages
+
+We show one row per distinct age label so we can check the conversions and
+group assignments. An age label with a missing `age_group` can be inspected
+in the original `age` column.
 
 ```{r}
-readr::write_tsv(expr_aug, "../data/03_dat_aug.tsv")
+expr_aug |>
+  distinct(age, age_pcw, age_years, age_group) |>
+  arrange(age_group, age_pcw, age_years)
+```
+
+## Write augmented data
+
+```{r}
+expr_aug |>
+  write_tsv(file = here("data", "03_dat_aug.tsv"))
 ```
