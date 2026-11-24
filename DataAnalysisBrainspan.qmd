@@ -32,14 +32,14 @@ if (!all(file.exists(prereq))) {
   unzip(zip_path, exdir = rdir)}
 
 # Reading matrices and metadata
-
+rows_metadata <- read_csv(file.path(rdir, "rows_metadata.csv"))
+columns_metadata  <- read_csv(file.path(rdir, "columns_metadata.csv"))
+  col_types = cols(.default = col_double())
 expression_matrix <- read_csv(file.path(rdir, "expression_matrix.csv"),
                               col_names = c("GeneID", as.character(columns_metadata$column_num)),
                               col_types = cols(.default = col_double()))
 
-rows_metadata <- read_csv(file.path(rdir, "rows_metadata.csv"))
-columns_metadata  <- read_csv(file.path(rdir, "columns_metadata.csv"))
-  col_types = cols(.default = col_double())
+
 
 hippocampus_expression_matrix <- read_csv(file.path(edir, "BrainSpan_HIPPOCAMPUS_expression_matrix.csv")) 
 DLPFC_expression_matrix <- read_csv(file.path(edir, "BrainSpan_DLPFC_expression_matrix.csv"))
@@ -77,7 +77,27 @@ dlpfc_exp_matrix_revised_colnames
 ```
 
 ```{r}
-expression_matrix$GeneID = rows_metadata$ensembl_gene_id
-expression_matrix
+tidy_matrix1 <- rows_metadata |> select(ensembl_gene_id,gene_symbol,row_num)
 
+tidy_matrix1 <- tidy_matrix1 |> cross_join(columns_metadata) |> select(ensembl_gene_id,gene_symbol,donor_id,gender,age,structure_name,row_num,column_num)
+
+m <- as.matrix(expression_matrix[, -1])
+tidy_matrix1 <- tidy_matrix1 |>
+  mutate(rpkm = m[cbind(row_num, column_num)]) |> select(ensembl_gene_id,gene_symbol,donor_id,gender,age,structure_name,rpkm)
+
+```
+
+```{r}
+tidy_matrix1
+
+
+sfari <- read_csv("https://gene.sfari.org//wp-content/themes/sfari-gene/utilities/download-csv.php?api-endpoint=genes") |>
+  janitor::clean_names() 
+
+high_conf <- sfari |> filter(gene_score == 1)
+syndromic <- sfari |> filter(syndromic == 1)
+
+sfari
+high_conf
+syndromic
 ```
