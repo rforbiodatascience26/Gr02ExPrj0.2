@@ -9,48 +9,18 @@ editor: visual
 
 ```{r}
 library(tidyverse)
-
-# Setting up directories for later downloads, and a timeout limit to allow the downloading of larger files.
-options(timeout = 1200)
-rdir <- "data/_raw"
-edir <- "data/_external"
-
-# Downloading of .csv's from Brainspan.
-zip_url  <- "https://brainspan.org/api/v2/well_known_file_download/267666525"
-zip_path <- file.path(rdir, "brainspan_genes.zip")
-
-
-# Downloading and Unzipping Expression Matrix, while making it a prerequisite that the expression matrix and the two metadata .csv's are present.
-
-prereq <- file.path(rdir, c("expression_matrix.csv", "columns_metadata.csv", "rows_metadata.csv"))
-
-if (!all(file.exists(prereq))) {
-  download.file(zip_url, zip_path, mode = "wb")
-  download.file(zip_url, zip_path, mode = "wb")
-  file.size(zip_path) / 1e6
-  unzip(zip_path, list = TRUE)
-  unzip(zip_path, exdir = rdir)}
-
-# Reading matrices and metadata
-rows_metadata <- read_csv(file.path(rdir, "rows_metadata.csv"))
-columns_metadata  <- read_csv(file.path(rdir, "columns_metadata.csv"))
-  col_types = cols(.default = col_double())
-expression_matrix <- read_csv(file.path(rdir, "expression_matrix.csv"),
-                              col_names = c("GeneID", as.character(columns_metadata$column_num)),
-                              col_types = cols(.default = col_double()))
-
-
-
-hippocampus_expression_matrix <- read_csv(file.path(edir, "BrainSpan_HIPPOCAMPUS_expression_matrix.csv")) 
-DLPFC_expression_matrix <- read_csv(file.path(edir, "BrainSpan_DLPFC_expression_matrix.csv"))
-  
-
-rows_metadata
-columns_metadata
-expression_matrix
-hippocampus_expression_matrix
-DLPFC_expression_matrix
+library("here")
+dat_load <- read_tsv(file = here("data/01_dat_load.tsv"),
+                     show_col_types = FALSE)
+sfari_load <- read_tsv(file = here("data/01_sfari_load.tsv"),
+                       show_col_types = FALSE)
+hippocampus_expression_matrix <- read_tsv(here("data/01_hippocampus_load.tsv"),
+                                          show_col_types = FALSE)
+DLPFC_expression_matrix <- read_tsv(here("data/01_dlpfc_load.tsv"),
+                                    show_col_types = FALSE)
 ```
+
+
 
 ```{r}
 # Calling the first row of the two expression matrices, as tibbles, which are both transformed to extract their linearized values as pure vectors, which are converted to pcw, unless they're already born whereupon their unit is converted to years (yrs).
@@ -77,18 +47,23 @@ dlpfc_exp_matrix_revised_colnames
 ```
 
 ```{r}
-tidy_matrix1 <- rows_metadata |> select(ensembl_gene_id,gene_symbol,row_num)
-
-tidy_matrix1 <- tidy_matrix1 |> cross_join(columns_metadata) |> select(ensembl_gene_id,gene_symbol,donor_id,gender,age,structure_name,row_num,column_num)
-
-m <- as.matrix(expression_matrix[, -1])
-tidy_matrix1 <- tidy_matrix1 |>
-  mutate(rpkm = m[cbind(row_num, column_num)]) |> select(ensembl_gene_id,gene_symbol,donor_id,gender,age,structure_name,rpkm)
+tidy_matrix1 <- dat_load |>
+  pivot_longer(cols = starts_with("ENSG"),
+               names_to = "gene",
+               values_to = "rpkm") |>
+  separate_wider_delim(cols = gene,
+                       delim = "_",
+                       names = c("ensembl_gene_id", "gene_symbol"),
+                       too_few = "align_start",
+                       too_many = "merge") |>
+  select(ensembl_gene_id, gene_symbol, donor_id, gender, age,
+         structure_name, rpkm)
 
 ```
 
 ```{r}
-sfari <- read_csv("https://gene.sfari.org//wp-content/themes/sfari-gene/utilities/download-csv.php?api-endpoint=genes") |>
+sfari <- sfari_load |>
+  rename_with(\(x) str_replace_all(x, "-", "_")) |>
   rename_with(\(x) str_replace_all(x, "-", "_")) |>
   select(ensembl_id, gene_score, syndromic) |>
   filter(!is.na(ensembl_id)) |>

@@ -86,6 +86,12 @@ rows_metadata <- read_csv(file = str_c(raw_dir, "/rows_metadata.csv"))
 # columns X1, X2, X3, ... instead of using the first row of data as names
 expression_matrix <- read_csv(file = str_c(raw_dir, "/expression_matrix.csv"),
                               col_names = FALSE)
+
+hippocampus_load <- read_csv(
+  file = str_c(external_dir, "/BrainSpan_HIPPOCAMPUS_expression_matrix.csv"))
+
+dlpfc_load <- read_csv(
+  file = str_c(external_dir, "/BrainSpan_DLPFC_expression_matrix.csv"))
 ```
 ## Check the loaded data
 
@@ -166,4 +172,8 @@ dat_load |>
   write_tsv(file = here("data/01_dat_load.tsv"))
 sfari_load |>
   write_tsv(file = here("data/01_sfari_load.tsv"))
+hippocampus_load |>
+  write_tsv(file = here("data/01_hippocampus_load.tsv"))
+dlpfc_load |>
+  write_tsv(file = here("data/01_dlpfc_load.tsv"))
 ```
