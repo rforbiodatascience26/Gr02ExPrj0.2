@@ -40,6 +40,7 @@ source(file = here("R/99_proj_func.R"))
 ```{r}
 data_dir <- here("data")
 raw_dir <- here("data/_raw")
+external_dir <- here("data/_external")
 base_url <- str_c("https://data.nemoarchive.org/other/grant/brainspan/",
                   "transcriptome/bulk/",
                   "RNAseqDevelopmentalTranscriptomeDataset/",
@@ -66,6 +67,12 @@ raw_files |>
   map(.f = ~ download_if_missing(file_name = .x,
                                  base_url = base_url,
                                  raw_dir = raw_dir))
+
+sfari_file <- str_c(raw_dir, "/sfari_genes.csv")
+if (!file.exists(sfari_file)) {
+  curl_download(url = "https://gene.sfari.org//wp-content/themes/sfari-gene/utilities/download-csv.php?api-endpoint=genes",
+                destfile = sfari_file)} 
+sfari_load <- read_csv(file = sfari_file) # Added SFARI installer. -Will
 ```
 ## Read data
 
@@ -157,8 +164,6 @@ dat_load |>
 ```{r}
 dat_load |>
   write_tsv(file = here("data/01_dat_load.tsv"))
+sfari_load |>
+  write_tsv(file = here("data/01_sfari_load.tsv"))
 ```
-
-
-
-
