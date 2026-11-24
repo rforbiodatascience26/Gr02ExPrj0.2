@@ -1,6 +1,8 @@
 ---
 title: "01_load"
-format: html
+format:
+  html:
+    embed-resources: true
 ---
 
 ## Aim
@@ -15,14 +17,16 @@ loads it into R. The data available comes as three files:
 -   `columns_metadata.csv`: sample information such as donor, age, sex
     and brain region (one row per sample).
 
-The output is a file `data/01_dat_load.tsv`, and it combines all three into one table with
-one row per sample. It has sample information first, then one column per gene.
+The output is a file `data/01_dat_load.tsv`, and it combines all three into one 
+table with one row per sample. It has sample information first, then one column 
+per gene
 
 Do note that the website from which the data is downloaded seems to have server
-issues fairly frequently. If an error occurs during downloading, please check the 
-server status and re-try when the website is up.
+issues fairly frequently. If an error occurs during downloading, please check 
+the server status and re-try when the website is up.
 
 ## Loading libraries
+
 ```{r}
 #| message: false
 library("tidyverse")
@@ -46,9 +50,9 @@ raw_files <- c("expression_matrix.csv",
 ```
 ## Download data
 
-The `data/` folder is not on GitHub as per assignment instructions, so after a fresh clone it does not
-exist.So we must create `data/` and `data/_raw/`, then we download each file only if
-it is missing.
+The `data/` folder is not on GitHub as per assignment instructions, so after a 
+fresh clone it does not exist.So we must create `data/` and `data/_raw/`, then 
+we download each file only if it is missing.
 
 ```{r}
 if (!dir.exists(data_dir)) {
@@ -66,6 +70,7 @@ raw_files |>
 ## Read data
 
 ```{r}
+#| message: false
 columns_metadata <- read_csv(file = str_c(raw_dir, "/columns_metadata.csv"))
 
 rows_metadata <- read_csv(file = str_c(raw_dir, "/rows_metadata.csv"))
@@ -105,8 +110,9 @@ rows_metadata |>
 
 We put the Data into table. Each gene column is named
 `<ensembl_gene_id>_<gene_symbol>` so both identifiers are kept for
-`02_clean.qmd`. Genes without a symbol keep only their Ensembl ID, since we cannot
-have a missing value for the column header.
+`02_clean.qmd`. Genes without a symbol keep only their Ensembl ID, 
+since we cannot have a missing value for the column header.
+
 ```{r}
 gene_names <- rows_metadata |>
   mutate(gene = case_when(
