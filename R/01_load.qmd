@@ -15,8 +15,12 @@ loads it into R. The data available comes as three files:
 -   `columns_metadata.csv`: sample information such as donor, age, sex
     and brain region (one row per sample).
 
-The output, `data/01_dat_load.tsv`, combines all three into one table with
-one row per sample: sample information first, then one column per gene.
+The output is a file `data/01_dat_load.tsv`, and it combines all three into one table with
+one row per sample. It has sample information first, then one column per gene.
+
+Do note that the website from which the data is downloaded seems to have server
+issues fairly frequently. If an error occurs during downloading, please check the 
+server status and re-try when the website is up.
 
 ## Loading libraries
 ```{r}
@@ -99,11 +103,10 @@ rows_metadata |>
 
 ## Combine into one table
 
-Data is put into table. Each gene column is named
+We put the Data into table. Each gene column is named
 `<ensembl_gene_id>_<gene_symbol>` so both identifiers are kept for
-`02_clean.qmd`. Genes without a symbol keep only their Ensembl ID, since a
-missing value cannot be used as a column name.
-
+`02_clean.qmd`. Genes without a symbol keep only their Ensembl ID, since we cannot
+have a missing value for the column header.
 ```{r}
 gene_names <- rows_metadata |>
   mutate(gene = case_when(
