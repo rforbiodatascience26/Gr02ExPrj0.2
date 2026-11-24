@@ -88,16 +88,28 @@ tidy_matrix1 <- tidy_matrix1 |>
 ```
 
 ```{r}
-tidy_matrix1
-
-
 sfari <- read_csv("https://gene.sfari.org//wp-content/themes/sfari-gene/utilities/download-csv.php?api-endpoint=genes") |>
-  janitor::clean_names() 
+  rename_with(\(x) str_replace_all(x, "-", "_")) |>
+  select(ensembl_id, gene_score, syndromic) |>
+  filter(!is.na(ensembl_id)) |>
+  distinct(ensembl_id, .keep_all = TRUE)
 
-high_conf <- sfari |> filter(gene_score == 1)
-syndromic <- sfari |> filter(syndromic == 1)
+tidy_matrix1 <- tidy_matrix1 |>
+  left_join(sfari,
+            by = join_by(ensembl_gene_id == ensembl_id),
+            relationship = "many-to-one")
 
-sfari
-high_conf
-syndromic
+sfari |>
+  anti_join(tidy_matrix1 |> distinct(ensembl_gene_id),
+            by = join_by(ensembl_id == ensembl_gene_id))
+
+sfari_matrix <- tidy_matrix1 |>
+  filter(gene_score >= 1 | syndromic == 1) |> select(ensembl_gene_id,gene_symbol,donor_id,gender,age, structure_name,rpkm,gene_score,syndromic)
+
+tidy_matrix1
 ```
+
+```{r}
+sfari_matrix
+```
+

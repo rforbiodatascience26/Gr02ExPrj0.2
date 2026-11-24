@@ -403,9 +403,58 @@ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 <span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">rpkm =</span> m[<span class="fu">cbind</span>(row_num, column_num)]) <span class="sc">|&gt;</span> <span class="fu">select</span>(ensembl_gene_id,gene_symbol,donor_id,gender,age,structure_name,rpkm)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>tidy_matrix1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb24"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>sfari <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"https://gene.sfari.org//wp-content/themes/sfari-gene/utilities/download-csv.php?api-endpoint=genes"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb24-2"><a href="#cb24-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">rename_with</span>(\(x) <span class="fu">str_replace_all</span>(x, <span class="st">"-"</span>, <span class="st">"_"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb24-3"><a href="#cb24-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(ensembl_id, gene_score, syndromic) <span class="sc">|&gt;</span></span>
+<span id="cb24-4"><a href="#cb24-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">is.na</span>(ensembl_id)) <span class="sc">|&gt;</span></span>
+<span id="cb24-5"><a href="#cb24-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">distinct</span>(ensembl_id, <span class="at">.keep_all =</span> <span class="cn">TRUE</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stderr">
+<pre><code>Rows: 1315 Columns: 10
+── Column specification ────────────────────────────────────────────────────────
+Delimiter: ","
+chr (5): gene-symbol, gene-name, ensembl-id, chromosome, genetic-category
+dbl (5): status, gene-score, syndromic, eagle, number-of-reports
+
+ℹ Use `spec()` to retrieve the full column specification for this data.
+ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>tidy_matrix1 <span class="ot">&lt;-</span> tidy_matrix1 <span class="sc">|&gt;</span></span>
+<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">left_join</span>(sfari,</span>
+<span id="cb26-3"><a href="#cb26-3" aria-hidden="true" tabindex="-1"></a>            <span class="at">by =</span> <span class="fu">join_by</span>(ensembl_gene_id <span class="sc">==</span> ensembl_id),</span>
+<span id="cb26-4"><a href="#cb26-4" aria-hidden="true" tabindex="-1"></a>            <span class="at">relationship =</span> <span class="st">"many-to-one"</span>)</span>
+<span id="cb26-5"><a href="#cb26-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb26-6"><a href="#cb26-6" aria-hidden="true" tabindex="-1"></a>sfari <span class="sc">|&gt;</span></span>
+<span id="cb26-7"><a href="#cb26-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">anti_join</span>(tidy_matrix1 <span class="sc">|&gt;</span> <span class="fu">distinct</span>(ensembl_gene_id),</span>
+<span id="cb26-8"><a href="#cb26-8" aria-hidden="true" tabindex="-1"></a>            <span class="at">by =</span> <span class="fu">join_by</span>(ensembl_id <span class="sc">==</span> ensembl_gene_id))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 27,445,024 × 7
+<pre><code># A tibble: 18 × 3
+   ensembl_id      gene_score syndromic
+   &lt;chr&gt;                &lt;dbl&gt;     &lt;dbl&gt;
+ 1 ENSG00000282608          2         0
+ 2 ENSG00000285077          2         0
+ 3 ENSG00000273749          2         0
+ 4 ENSG00000261150          2         0
+ 5 ENSG00000260230          3         0
+ 6 ENSG00000278311          2         0
+ 7 ENSG00000273079          1         0
+ 8 ENSG00000263001          2         0
+ 9 ENSG00000276966         NA         1
+10 ENSG00000272333          3         0
+11 ENSG00000264589          2         0
+12 ENSG00000284202          2         0
+13 ENSG00000264424          2         0
+14 ENSG00000264343          2         0
+15 ENSG00000266094          2         0
+16 ENSG00000275835          2         0
+17 ENSG00000273820          3         0
+18 ENSG00000261221          1         0</code></pre>
+</div>
+<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>sfari_matrix <span class="ot">&lt;-</span> tidy_matrix1 <span class="sc">|&gt;</span></span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">filter</span>(gene_score <span class="sc">&gt;=</span> <span class="dv">1</span> <span class="sc">|</span> syndromic <span class="sc">==</span> <span class="dv">1</span>) <span class="sc">|&gt;</span> <span class="fu">select</span>(ensembl_gene_id,gene_symbol,donor_id,gender,age, structure_name,rpkm,gene_score,syndromic)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>tidy_matrix1</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code># A tibble: 27,445,024 × 9
    ensembl_gene_id gene_symbol donor_id gender age   structure_name         rpkm
    &lt;chr&gt;           &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;                 &lt;dbl&gt;
  1 ENSG00000000003 TSPAN6         13058 M      8 pcw occipital neocortex    36.4
@@ -418,79 +467,28 @@ Specify the column types or set `show_col_types = FALSE` to quiet this message.
  8 ENSG00000000003 TSPAN6         13058 M      8 pcw dorsal thalamus        16.6
  9 ENSG00000000003 TSPAN6         13058 M      8 pcw anterior (rostral) c…  44.6
 10 ENSG00000000003 TSPAN6         13058 M      8 pcw dorsolateral prefron…  44.9
-# ℹ 27,445,014 more rows</code></pre>
+# ℹ 27,445,014 more rows
+# ℹ 2 more variables: gene_score &lt;dbl&gt;, syndromic &lt;dbl&gt;</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb26"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>sfari <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">"https://gene.sfari.org//wp-content/themes/sfari-gene/utilities/download-csv.php?api-endpoint=genes"</span>) <span class="sc">|&gt;</span></span>
-<span id="cb26-2"><a href="#cb26-2" aria-hidden="true" tabindex="-1"></a>  janitor<span class="sc">::</span><span class="fu">clean_names</span>() </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stderr">
-<pre><code>Rows: 1315 Columns: 10
-── Column specification ────────────────────────────────────────────────────────
-Delimiter: ","
-chr (5): gene-symbol, gene-name, ensembl-id, chromosome, genetic-category
-dbl (5): status, gene-score, syndromic, eagle, number-of-reports
-
-ℹ Use `spec()` to retrieve the full column specification for this data.
-ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.</code></pre>
 </div>
-<div class="sourceCode cell-code" id="cb28"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a>high_conf <span class="ot">&lt;-</span> sfari <span class="sc">|&gt;</span> <span class="fu">filter</span>(gene_score <span class="sc">==</span> <span class="dv">1</span>)</span>
-<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>syndromic <span class="ot">&lt;-</span> sfari <span class="sc">|&gt;</span> <span class="fu">filter</span>(syndromic <span class="sc">==</span> <span class="dv">1</span>)</span>
-<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>sfari</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>sfari_matrix</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 1,315 × 10
-   status gene_symbol gene_name           ensembl_id chromosome genetic_category
-    &lt;dbl&gt; &lt;chr&gt;       &lt;chr&gt;               &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;           
- 1      9 ABAT        4-aminobutyrate am… ENSG00000… 16         Rare Single Gen…
- 2      9 ABCA10      ATP-binding casset… ENSG00000… 17         Rare Single Gen…
- 3      9 ABCA13      ATP binding casset… ENSG00000… 7          Rare Single Gen…
- 4      9 ABCA2       ATP binding casset… ENSG00000… 9          Rare Single Gen…
- 5      9 ABCA7       ATP-binding casset… ENSG00000… 19         Rare Single Gen…
- 6      9 ABCE1       ATP binding casset… ENSG00000… 4          Rare Single Gen…
- 7      9 ABL2        ABL proto-oncogene… ENSG00000… 1          Rare Single Gen…
- 8      9 ACAP2       ArfGAP with coiled… ENSG00000… 3          Rare Single Gen…
- 9      9 ACE         angiotensin I conv… ENSG00000… 17         Rare Single Gen…
-10      9 ACHE        Acetylcholinestera… ENSG00000… 7          Rare Single Gen…
-# ℹ 1,305 more rows
-# ℹ 4 more variables: gene_score &lt;dbl&gt;, syndromic &lt;dbl&gt;, eagle &lt;dbl&gt;,
-#   number_of_reports &lt;dbl&gt;</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb30"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>high_conf</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 247 × 10
-   status gene_symbol gene_name           ensembl_id chromosome genetic_category
-    &lt;dbl&gt; &lt;chr&gt;       &lt;chr&gt;               &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;           
- 1      9 ABCE1       ATP binding casset… ENSG00000… 4          Rare Single Gen…
- 2      9 ACTB        actin beta          ENSG00000… 7          Rare Single Gen…
- 3      9 ADNP        Activity-dependent… ENSG00000… 20         Rare Single Gen…
- 4      9 ADSL        adenylosuccinate l… ENSG00000… 22         Rare Single Gen…
- 5      9 AFF2        AF4/FMR2 family, m… ENSG00000… X          Rare Single Gen…
- 6      9 AHDC1       AT-hook DNA bindin… ENSG00000… 1          Rare Single Gen…
- 7      9 ALDH5A1     aldehyde dehydroge… ENSG00000… 6          Rare Single Gen…
- 8      9 ANK2        Ankyrin 2, neuronal ENSG00000… 4          Rare Single Gen…
- 9      9 ANK3        ankyrin 3           ENSG00000… 10         Rare Single Gen…
-10      9 ANKRD11     ankyrin repeat dom… ENSG00000… 16         Rare Single Gen…
-# ℹ 237 more rows
-# ℹ 4 more variables: gene_score &lt;dbl&gt;, syndromic &lt;dbl&gt;, eagle &lt;dbl&gt;,
-#   number_of_reports &lt;dbl&gt;</code></pre>
-</div>
-<div class="sourceCode cell-code" id="cb32"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb32-1"><a href="#cb32-1" aria-hidden="true" tabindex="-1"></a>syndromic</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code># A tibble: 313 × 10
-   status gene_symbol gene_name           ensembl_id chromosome genetic_category
-    &lt;dbl&gt; &lt;chr&gt;       &lt;chr&gt;               &lt;chr&gt;      &lt;chr&gt;      &lt;chr&gt;           
- 1      9 ACTB        actin beta          ENSG00000… 7          Rare Single Gen…
- 2      9 ACTL6B      actin like 6B       ENSG00000… 7          Rare Single Gen…
- 3      9 ACY1        aminoacylase 1      ENSG00000… 3          Rare Single Gen…
- 4      9 ADGRL1      adhesion G protein… ENSG00000… 19         Rare Single Gen…
- 5      9 ADNP        Activity-dependent… ENSG00000… 20         Rare Single Gen…
- 6      9 ADSL        adenylosuccinate l… ENSG00000… 22         Rare Single Gen…
- 7      9 AGO2        argonaute RISC cat… ENSG00000… 8          Rare Single Gen…
- 8      9 AHDC1       AT-hook DNA bindin… ENSG00000… 1          Rare Single Gen…
- 9      9 AHI1        Abelson helper int… ENSG00000… 6          Rare Single Gen…
-10      9 ALDH1A3     aldehyde dehydroge… ENSG00000… 15         Rare Single Gen…
-# ℹ 303 more rows
-# ℹ 4 more variables: gene_score &lt;dbl&gt;, syndromic &lt;dbl&gt;, eagle &lt;dbl&gt;,
-#   number_of_reports &lt;dbl&gt;</code></pre>
+<pre><code># A tibble: 677,532 × 9
+   ensembl_gene_id gene_symbol donor_id gender age   structure_name         rpkm
+   &lt;chr&gt;           &lt;chr&gt;          &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt; &lt;chr&gt;                 &lt;dbl&gt;
+ 1 ENSG00000001497 LAS1L          13058 M      8 pcw occipital neocortex   11.0 
+ 2 ENSG00000001497 LAS1L          13058 M      8 pcw primary motor-sensor…  8.94
+ 3 ENSG00000001497 LAS1L          13058 M      8 pcw amygdaloid complex     6.51
+ 4 ENSG00000001497 LAS1L          13058 M      8 pcw medial ganglionic em…  7.49
+ 5 ENSG00000001497 LAS1L          13058 M      8 pcw posterior (caudal) s…  6.19
+ 6 ENSG00000001497 LAS1L          13058 M      8 pcw upper (rostral) rhom…  5.63
+ 7 ENSG00000001497 LAS1L          13058 M      8 pcw caudal ganglionic em…  8.01
+ 8 ENSG00000001497 LAS1L          13058 M      8 pcw dorsal thalamus        5.17
+ 9 ENSG00000001497 LAS1L          13058 M      8 pcw anterior (rostral) c… 10.2 
+10 ENSG00000001497 LAS1L          13058 M      8 pcw dorsolateral prefron…  8.78
+# ℹ 677,522 more rows
+# ℹ 2 more variables: gene_score &lt;dbl&gt;, syndromic &lt;dbl&gt;</code></pre>
 </div>
 </div>
 </section>
