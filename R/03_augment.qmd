@@ -1,7 +1,9 @@
 ---
 title: "03_augment"
 author: "Group 02"
-format: html
+format: 
+  html:
+    embed-resources: true
 editor: visual
 ---
 
