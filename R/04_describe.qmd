@@ -3,3 +3,137 @@ title: "04_describe"
 format: html
 ---
 
+## Aim
+
+This document describes the distribution of BrainSpan RNA-seq samples across developmental age groups in the hippocampus and dorsolateral prefrontal cortex (DLPFC).
+
+## Load libraries and read augmented data
+
+We read the augmented data saved by `03_augment.qmd`. The table contains one row per gene and sample, along with the developmental age group assigned to each sample.
+
+```{r}
+#| message: false
+library(tidyverse)
+library(here)
+
+expr_aug <- read_tsv(
+  file = here("data", "03_dat_aug.tsv"),
+  show_col_types = FALSE
+)
+```
+
+## Create a sample metadata table
+
+We retain samples from the hippocampus and DLPFC. In these data, each combination of donor ID and brain region identifies one sample. Since the same sample appears on multiple gene rows, we keep each combination of donor ID, brain region, and age group once. The resulting table contains 67 samples.
+
+```{r}
+sample_metadata <- expr_aug |>
+  filter(
+    structure_name %in% c(
+      "hippocampus (hippocampal formation)",
+      "dorsolateral prefrontal cortex"
+    )
+  ) |>
+  distinct(donor_id, structure_name, age_group)
+
+nrow(sample_metadata)
+```
+
+## Count samples by brain region and age group
+
+We count samples in each combination of brain region and developmental age group. This shows how well each developmental stage is represented in the two regions.
+
+```{r}
+sample_counts <- sample_metadata |>
+  count(structure_name, age_group, name = "n_samples")
+
+sample_counts
+```
+
+## Visualise sample counts across developmental stages
+
+We plot the number of samples in each developmental age group for the hippocampus and dorsolateral prefrontal cortex (DLPFC).
+
+```{r}
+#| fig-cap: "Number of BrainSpan samples by developmental age group and brain region."
+
+sample_counts |>
+  mutate(
+    age_group = factor(
+      age_group,
+      levels = c("Prenatal", "Infant", "Child", "Adolescent", "Adult")
+    ),
+    brain_region = recode(
+      structure_name,
+      "hippocampus (hippocampal formation)" = "Hippocampus",
+      "dorsolateral prefrontal cortex" = "DLPFC"
+    )
+  ) |>
+  ggplot(aes(x = age_group, y = n_samples, fill = brain_region)) +
+  geom_col(position = "dodge") +
+  labs(
+    x = "Developmental age group",
+    y = "Number of samples",
+    fill = "Brain region"
+  ) +
+  theme_minimal()
+```
+
+## Check donor overlap between brain regions
+
+We count the number of donors with samples from both brain regions. These donors can be included in a paired comparison of the hippocampus and DLPFC.
+
+```{r}
+donor_coverage <- sample_metadata |>
+  group_by(donor_id) |>
+  summarise(
+    n_regions = n_distinct(structure_name),
+    .groups = "drop"
+  )
+
+donor_coverage |>
+  count(n_regions, name = "n_donors")
+```
+
+## Count paired donors by developmental age group
+
+We count donors with samples from both brain regions within each developmental age group.
+
+```{r}
+paired_donors <- donor_coverage |>
+  filter(n_regions == 2)
+
+paired_counts <- sample_metadata |>
+  semi_join(paired_donors, by = "donor_id") |>
+  distinct(donor_id, age_group) |>
+  count(age_group, name = "n_pairs")
+
+paired_counts
+```
+
+## Visualise donor pairs across developmental stages
+
+We plot the number of donors with samples from both the hippocampus and DLPFC in each developmental age group. Each donor contributes one matched pair.
+
+```{r}
+#| fig-cap: "Number of matched hippocampus–DLPFC sample pairs by developmental age group."
+
+paired_counts |>
+  mutate(
+    age_group = factor(
+      age_group,
+      levels = c("Prenatal", "Infant", "Child", "Adolescent", "Adult")
+    )
+  ) |>
+  ggplot(aes(x = age_group, y = n_pairs)) +
+  geom_col(fill = "steelblue") +
+  labs(
+    x = "Developmental age group",
+    y = "Number of donor pairs"
+  ) +
+  theme_minimal()
+```
+
+## Summary
+
+The dataset includes `r nrow(sample_metadata)` tissue samples from `r nrow(donor_coverage)` donors across the Hippocampus and DLPFC. Of these donors, `r nrow(paired_donors)` contributed a sample from both regions and can be included in a paired comparison.
