@@ -7,10 +7,7 @@ editor: visual
 
 ## Aim
 
-This script reads the cleaned BrainSpan data from `02_clean.qmd` and adds
-two variables for the analysis: log-transformed expression and developmental
-age group. It also extracts numeric ages from the original age labels.
-The output is `data/03_dat_aug.tsv`, with one row per gene and sample.
+This script reads the cleaned BrainSpan data from `02_clean.qmd` and adds two variables for the analysis: log-transformed expression and developmental age group. It also extracts numeric ages from the original age labels. The output is `data/03_dat_aug.tsv`, with one row per gene and sample.
 
 ## Loading libraries
 
@@ -22,9 +19,7 @@ library("here")
 
 ## Read cleaned data
 
-The input is the long table from `02_clean.qmd`. The `rpkm` column contains
-the expression value, and the `age` column contains the original BrainSpan
-age label for each sample.
+The input is the long table from `02_clean.qmd`. The `rpkm` column contains the expression value, and the `age` column contains the original BrainSpan age label for each sample.
 
 ```{r}
 expr_clean <- read_tsv(
@@ -35,9 +30,7 @@ expr_clean <- read_tsv(
 
 ## Log-transform expression
 
-Expression values can span several orders of magnitude. We use a base-2
-logarithm to compress this range. Adding 1 before taking the logarithm
-keeps zero expression values defined.
+Expression values can span several orders of magnitude. We use a base-2 logarithm to compress this range. Adding 1 before taking the logarithm keeps zero expression values defined.
 
 ```{r}
 expr_aug <- expr_clean |>
@@ -46,14 +39,9 @@ expr_aug <- expr_clean |>
 
 ## Derive developmental age and age group
 
-We split each age label into a number and a unit. Prenatal labels such as
-`12 pcw` are stored in `age_pcw` as post-conception weeks. Postnatal labels
-such as `6 mos` and `4 yrs` are stored in `age_years`. We divide months by
-12 to express both postnatal units in years.
+We split each age label into a number and a unit. Prenatal labels such as `12 pcw` are stored in `age_pcw` as post-conception weeks. Postnatal labels such as `6 mos` and `4 yrs` are stored in `age_years`. We divide months by 12 to express both postnatal units in years.
 
-We then assign samples to five developmental groups. Postnatal samples
-under 2 years are classified as Infant, ages 2 to under 12 as Child,
-ages 12 to under 20 as Adolescent, and ages 20 and above as Adult.
+We then assign samples to five developmental groups. Postnatal samples under 2 years are classified as Infant, ages 2 to under 12 as Child, ages 12 to under 20 as Adolescent, and ages 20 and above as Adult.
 
 ```{r}
 expr_aug <- expr_aug |>
@@ -88,9 +76,7 @@ expr_aug <- expr_aug |>
 
 ## Check the derived ages
 
-We show one row per distinct age label so we can check the conversions and
-group assignments. An age label with a missing `age_group` can be inspected
-in the original `age` column.
+We show one row per distinct age label so we can check the conversions and group assignments. An age label with a missing `age_group` can be inspected in the original `age` column.
 
 ```{r}
 expr_aug |>
