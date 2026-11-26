@@ -16,6 +16,12 @@ execute:
   warning: false
   message: false
 ---
+```{r}
+#| label: setup
+#| include: false
+
+library(tidyverse)
+```
 
 ## Introduction
 
@@ -34,17 +40,88 @@ Our main hypothesis is that...
 - Statistical methods
 - Visualization
 
-## Exploratory Data Analysis
+## Data augmentation
+
+::: {.columns}
+
+::: {.column width="50%"}
+
+### Gene expression
+
+$$
+\log_2(\mathrm{RPKM} + 1)
+$$
+
+- Compresses the range of expression values
+- Adding 1 keeps zero values defined
+
+:::
+
+::: {.column width="50%"}
+
+### Developmental age
+
+| Original label | Numeric age | Age group |
+|---|---|---|
+| `12 pcw` | 12 weeks after conception | Prenatal |
+| `6 mos` | 0.5 years | Infant |
+
+:::
+
+:::
+
+## Sample distribution by region and age
 
 ```{r}
-library(tidyverse)
+#| fig-width: 10
+#| fig-height: 4
 
-ggplot(iris, aes(x = Sepal.Length,
-                 y = Petal.Length,
-                 color = Species)) +
-  geom_point(size = 3) +
-  theme_minimal(base_size = 20)
+sample_counts <- tribble(
+  ~age_group,    ~Hippocampus, ~DLPFC,
+  "Prenatal",    15,           17,
+  "Infant",       3,            4,
+  "Child",        5,            6,
+  "Adolescent",   3,            3,
+  "Adult",        6,            5
+)
+
+# Keep the age groups in developmental order.
+plot_data <- sample_counts |>
+  mutate(age_group = factor(age_group, levels = age_group)) |>
+  pivot_longer(
+    cols = c(Hippocampus, DLPFC),
+    names_to = "brain_region",
+    values_to = "n_samples"
+  )
+
+ggplot(plot_data, aes(x = age_group, y = n_samples, fill = brain_region)) +
+  geom_col(position = "dodge") +
+  labs(
+    x = "Developmental age group",
+    y = "Number of tissue samples",
+    fill = "Brain region"
+  ) +
+  theme_minimal(base_size = 17)
 ```
+
+32 of 67 tissue samples are prenatal.\
+Each donor–region combination is counted once.
+
+## Matched donors across regions
+
+30 of 37 donors contributed samples from both brain regions.
+
+
+| Developmental stage | Matched donor pairs |
+|:--------------------|--------------------:|
+| Prenatal            | 15 |
+| Infant              |  2 |
+| Child               |  5 |
+| Adolescent          |  3 |
+| Adult               |  5 |
+
+
+Each pair compares both regions within th same donor.
 
 ## Results
 
