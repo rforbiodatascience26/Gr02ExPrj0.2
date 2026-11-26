@@ -1,6 +1,8 @@
 ---
 title: "05_analysis_1: PCA of hippocampus and DLPFC samples"
-format: html
+format:
+  html:
+    embed-resources: true
 ---
 
 ## Aim
@@ -13,50 +15,36 @@ Use principal component analysis (PCA) to see whether samples group by brain reg
 #| message: false
 library("tidyverse")
 library("broom")
+library("here")
 ```
 
 ## Load data
 
-Temporary input: the region-specific BrainSpan expression matrices in `data/_external/`. When `03_augment.qmd` writes `data/03_dat_aug.tsv`, switch to that file.
+The input is the augmented data from `03_augment.qmd`. Only the columns needed for the PCA are read, with their types set explicitly (the age columns are empty in the first rows, so automatic type guessing is not safe).
 
 ```{r}
-#| message: false
-hip_raw <- read_csv(file = "../data/_external/BrainSpan_HIPPOCAMPUS_expression_matrix.csv",
-                    name_repair = "unique_quiet")
-dlpfc_raw <- read_csv(file = "../data/_external/BrainSpan_DLPFC_expression_matrix.csv",
-                      name_repair = "unique_quiet")
+dat_aug <- read_tsv(file = here("data/03_dat_aug.tsv"),
+                    col_types = cols_only(ensembl_gene_id = col_character(),
+                                          donor_id = col_character(),
+                                          structure_name = col_character(),
+                                          age_pcw = col_double(),
+                                          age_years = col_double(),
+                                          age_group = col_character(),
+                                          log2_expr = col_double()))
 ```
 
-## Tidy data
+## Select samples
 
-One row per gene and sample. The age is stored in the column names as log10(age in years + 0.7), where negative ages are prenatal.
+Keep the hippocampus and DLPFC samples. Prenatal ages (in post-conception weeks) and postnatal ages (in years) are put on one scale, in years from birth, so they can be plotted together.
 
 ```{r}
-expr_long <- bind_rows(
-  hip_raw |>
-    rename(gene_id = 1) |>
-    pivot_longer(cols = -gene_id,
-                 names_to = "sample",
-                 values_to = "expression") |>
-    mutate(region = "Hippocampus"),
-  dlpfc_raw |>
-    rename(gene_id = 1) |>
-    pivot_longer(cols = -gene_id,
-                 names_to = "sample",
-                 values_to = "expression") |>
-    mutate(region = "DLPFC")
-) |>
-  mutate(sample_id = str_c(region, "_", sample),
-         log_age = sample |>
-           str_remove("^Human_Age_log10Yrs_plus0.7_") |>
-           str_remove("[.]{3}[0-9]+$") |>
-           as.numeric(),
-         age_years = 10^log_age - 0.7,
-         age_group = case_when(age_years < 0 ~ "Prenatal",
-                               age_years < 2 ~ "Infant",
-                               age_years < 12 ~ "Child",
-                               age_years < 20 ~ "Adolescent",
-                               TRUE ~ "Adult"),
+dat_pca <- dat_aug |>
+  filter(str_detect(structure_name, "hippocampus|dorsolateral prefrontal")) |>
+  mutate(region = case_when(str_detect(structure_name, "hippocampus") ~ "Hippocampus",
+                            TRUE ~ "DLPFC"),
+         sample_id = str_c(donor_id, "_", region),
+         age_from_birth = coalesce(age_years, (age_pcw - 40) / 52),
+         log_age = log10(age_from_birth + 0.7),
          age_group = factor(age_group,
                             levels = c("Prenatal", "Infant", "Child",
                                        "Adolescent", "Adult")))
@@ -64,27 +52,23 @@ expr_long <- bind_rows(
 
 ## Select genes
 
-Keep expressed genes (mean expression of at least 1), log2-transform, and use the 1000 most variable genes.
+Keep expressed genes (mean log2 expression of at least 1) and use the 1000 most variable genes.
 
 ```{r}
-expr_log <- expr_long |>
-  group_by(gene_id) |>
-  filter(mean(expression) >= 1) |>
-  ungroup() |>
-  mutate(log2_expr = log2(expression + 1))
-
-top_genes <- expr_log |>
-  group_by(gene_id) |>
-  summarise(variance = var(log2_expr)) |>
+top_genes <- dat_pca |>
+  group_by(ensembl_gene_id) |>
+  summarise(mean_expr = mean(log2_expr),
+            variance = var(log2_expr)) |>
+  filter(mean_expr >= 1) |>
   slice_max(variance, n = 1000)
 
-sample_info <- expr_log |>
-  distinct(sample_id, region, log_age, age_years, age_group)
+sample_info <- dat_pca |>
+  distinct(sample_id, region, log_age, age_group)
 
-expr_wide <- expr_log |>
-  semi_join(top_genes, by = "gene_id") |>
-  select(sample_id, gene_id, log2_expr) |>
-  pivot_wider(names_from = gene_id,
+dat_wide <- dat_pca |>
+  semi_join(top_genes, by = "ensembl_gene_id") |>
+  select(sample_id, ensembl_gene_id, log2_expr) |>
+  pivot_wider(names_from = ensembl_gene_id,
               values_from = log2_expr) |>
   left_join(sample_info, by = "sample_id")
 ```
@@ -92,12 +76,12 @@ expr_wide <- expr_log |>
 ## PCA
 
 ```{r}
-pca_fit <- expr_wide |>
+pca_fit <- dat_wide |>
   select(starts_with("ENSG")) |>
   prcomp(scale. = TRUE)
 
 pca_scores <- pca_fit |>
-  augment(expr_wide |> select(sample_id, region, log_age, age_years, age_group))
+  augment(dat_wide |> select(sample_id, region, log_age, age_group))
 
 pca_variance <- pca_fit |>
   tidy(matrix = "eigenvalues")
@@ -160,7 +144,7 @@ pl_pc1_age <- pca_scores |>
   geom_vline(xintercept = log10(0.7),
              linetype = "dashed") +
   labs(title = "PC1 across development (dashed line = birth)",
-       x = "Age, log10(years + 0.7)",
+       x = "Age, log10(years from birth + 0.7)",
        y = "PC1",
        colour = "Region") +
   theme_minimal()
@@ -171,17 +155,17 @@ pl_pc1_age
 ## Save plots
 
 ```{r}
-ggsave(filename = "../results/05_pca_scores.png",
+ggsave(filename = here("results/05_pca_scores.png"),
        plot = pl_scores,
        width = 7,
        height = 5,
        bg = "white")
-ggsave(filename = "../results/05_pca_variance.png",
+ggsave(filename = here("results/05_pca_variance.png"),
        plot = pl_variance,
        width = 7,
        height = 5,
        bg = "white")
-ggsave(filename = "../results/05_pca_pc1_age.png",
+ggsave(filename = here("results/05_pca_pc1_age.png"),
        plot = pl_pc1_age,
        width = 7,
        height = 5,
